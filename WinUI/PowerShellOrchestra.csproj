@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
+    <WindowsSdkPackageVersion>10.0.19041.57</WindowsSdkPackageVersion>
+    <RootNamespace>PowerShellOrchestra</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>..\PowerShell-Orchestra-Note.ico</ApplicationIcon>
+    <Platforms>x64</Platforms><RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <UseWinUI>true</UseWinUI><EnableMsixTooling>false</EnableMsixTooling>
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <SelfContained>false</SelfContained><EnableWinAppRunSupport>false</EnableWinAppRunSupport>
+    <Nullable>disable</Nullable><ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>PowerShellOrchestra</AssemblyName><Version>1.0.0</Version>
+    <Product>PowerShell Orchestra</Product>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.260317003" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.4654" />
+    <Compile Include="..\LayeredAudio.cs" Link="Audio\LayeredAudio.cs" />
+    <Content Include="..\PowerShell-Orchestra-Note.ico" Link="Assets\Orchestra.ico" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\PowerShell-Orchestra-Note.png" Link="Assets\Orchestra.png" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+  <Target Name="PublishXamlResources" AfterTargets="Publish">
+    <ItemGroup><NativeResource Include="$(TargetDir)App.xbf;$(TargetDir)MainWindow.xbf;$(TargetDir)$(AssemblyName).pri" /></ItemGroup>
+    <Copy SourceFiles="@(NativeResource)" DestinationFolder="$(PublishDir)" SkipUnchangedFiles="true" />
+  </Target>
+</Project>

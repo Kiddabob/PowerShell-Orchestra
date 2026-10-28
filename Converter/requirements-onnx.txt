@@ -1,0 +1,10 @@
+onnxruntime==1.31.1
+numpy==1.26.4
+librosa==0.11.0
+mir_eval==0.8.2
+pretty_midi==0.2.11.post0
+resampy==0.4.2
+scikit-learn==1.9.1
+scipy==1.17.1
+typing_extensions==4.16.0
+soundfile==0.14.0

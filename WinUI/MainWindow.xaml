@@ -1,0 +1,6 @@
+<Window x:Class="PowerShellOrchestra.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Grid x:Name="Root"><Grid.RowDefinitions><RowDefinition Height="48"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+    <Grid x:Name="TitleDrag" Padding="18,0,140,0"><StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center"><Image Source="ms-appx:///Assets/Orchestra.png" Width="23" Height="23"/><TextBlock Text="PowerShell Orchestra" Style="{ThemeResource BodyStrongTextBlockStyle}" VerticalAlignment="Center"/></StackPanel></Grid>
+    <TabView x:Name="Tabs" Grid.Row="1" IsAddTabButtonVisible="False" CanDragTabs="False" CanReorderTabs="False" TabWidthMode="SizeToContent"/>
+  </Grid>
+</Window>
