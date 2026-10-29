@@ -46,7 +46,6 @@ namespace OrchestraVisual {
    string names=active.Length==0?"—":string.Join(" + ",active.Select(n=>n.Name).Distinct().Take(4));
    if(active.Select(n=>n.Name).Distinct().Count()>4)names+=" +…";
    float noteSize=Math.Min(60*s,(w-m*2)/Math.Max(3,names.Length)*1.25f);
-   if(active.Length>0){float pulse=(float)Math.Exp(-(Position-active.Max(n=>n.Start))/170.0);using(var b=new SolidBrush(Color.FromArgb((int)(14+28*pulse),Accent)))g.FillEllipse(b,m-12*s,header-6*s,hero*1.8f,hero*1.1f);}
    Label(g,names,new RectangleF(m,header,w-m*2,hero*.72f),noteSize,active.Length>0?Accent:Color.FromArgb(81,103,132),true);
    string detail=active.Length==0?Band.ToUpper()+"  ·  listening for the next note":Band.ToUpper()+"  ·  "+active[0].Hz.ToString("0")+" Hz  ·  "+(active[0].End-active[0].Start).ToString("0")+" ms";
    Label(g,detail,new RectangleF(m,header+hero*.72f,w-m*2,hero*.28f),11*s,Color.FromArgb(151,174,201));
