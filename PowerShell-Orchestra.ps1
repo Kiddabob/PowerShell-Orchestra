@@ -130,9 +130,17 @@ function Refresh-OrchestraLibrary {
                 $prompt=Get-OrchestraIconPrompt $sender.Tag
                 [Windows.Forms.Clipboard]::SetText($prompt)
                 [void](Start-Process ('https://chatgpt.com/?q='+[Uri]::EscapeDataString($prompt)))
-                $footer.Text='ChatGPT opened with the song prompt. Send it, download the image, then use the pencil > Use custom icon.'
+                $footer.Text='ChatGPT opened with the song prompt. Download the artwork, then choose Use artwork with Orchestra frame.'
             }catch{$footer.Text='Could not open ChatGPT: '+$_.Exception.Message}
         });[void]$menu.Items.Add($generate)
+        $framed=New-Object Windows.Forms.ToolStripMenuItem;$framed.Text='Use artwork with Orchestra frame...';$framed.Tag=$song
+        $framed.Add_Click({param($sender,$eventArgs)
+            $dialog=New-Object Windows.Forms.OpenFileDialog;$dialog.Filter='Artwork images|*.png;*.jpg;*.jpeg;*.ico'
+            if($dialog.ShowDialog($form) -eq 'OK'){
+                try{[void](Save-OrchestraSongIcon $script:orchestraRoot $sender.Tag $dialog.FileName $true);$footer.Text='Song image updated.';Refresh-OrchestraLibrary}
+                catch{[void][Windows.Forms.MessageBox]::Show($form,$_.Exception.Message,'Could not use image','OK','Warning')}
+            };$dialog.Dispose()
+        });[void]$menu.Items.Add($framed)
         $use=New-Object Windows.Forms.ToolStripMenuItem;$use.Text='Use custom icon...';$use.Tag=$song
         $use.Add_Click({param($sender,$eventArgs)
             $dialog=New-Object Windows.Forms.OpenFileDialog;$dialog.Filter='Icon images|*.png;*.jpg;*.jpeg;*.ico'

@@ -13,7 +13,7 @@ try{
         'Delete' {$song=Get-BridgeSong $request.Id;Remove-OrchestraSong $root $song;$result=@{Deleted=$true}}
         'Rename' {Set-OrchestraSongTitle $root (Get-BridgeSong $request.Id) $request.Title;$result=@{Saved=$true}}
         'IconPrompt' {$result=@{Prompt=(Get-OrchestraIconPrompt (Get-BridgeSong $request.Id))}}
-        'SaveIcon' {Add-Type -AssemblyName System.Drawing;$result=@{Icon=(Save-OrchestraSongIcon $root (Get-BridgeSong $request.Id) $request.Path)}}
+        'SaveIcon' {Add-Type -AssemblyName System.Drawing;$result=@{Icon=(Save-OrchestraSongIcon $root (Get-BridgeSong $request.Id) $request.Path ([bool]$request.FrameArtwork))}}
         'Import' {
             Import-OrchestraMixEngine $root;$null=[LayeredMusic.Midi]::Read($request.Path,1,0,0,24)
             $folder=Join-Path $root 'Library';[void][IO.Directory]::CreateDirectory($folder)

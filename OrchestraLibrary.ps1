@@ -78,19 +78,35 @@ function Remove-OrchestraSong([string]$Root,$Song) {
 }
 
 function Get-OrchestraIconPrompt($Song) {
-    'Generate one square song-library icon for PowerShell Orchestra, using your normal image-generation workflow and returning the image directly. Song and artist: "'+$Song.Title+'". Consider the actual recording, artist, era and associated album or single artwork for its mood and visual identity; avoid interpreting the song title literally. If the recording is uncertain, use a tasteful music-inspired interpretation. Additional context: '+$Song.Theme+' Create original album-art-inspired imagery with a clear focal point.
-
-Place the artwork inside a consistent PowerShell-style tilted terminal frame, centred and filling most of the square canvas, with a thin steel-blue border, dark navy edge, subtle shadow and transparent space outside. Match the shape and proportions of the PowerShell Orchestra logo as closely as practical. Use muted, low-saturation colours and a matte finish, with a gentle cool-blue shine near the top like the main app logo. Avoid neon, intense glow, rainbow effects and metallic shine. Keep it legible at small sizes, with no text or extra frame. Produce the best single image directly; approximate proportions and small details are fine.' -replace '\n',"`n"
+    'Create one square album-art-inspired image for the PowerShell Orchestra song library. Song and artist: "'+$Song.Title+'". Consider the specific recording, artist, era, musical mood and associated album or single artwork; avoid interpreting the title literally. If uncertain, use a tasteful music-inspired interpretation without inventing facts. Additional context: '+$Song.Theme+' Create original artwork with a clear central focal point, in a muted, low-saturation palette and a soft matte finish. Avoid neon, excessive glow, text and borders. Fill the square image edge to edge; the app will crop it and add its own frame. Return one image directly.'
 }
 
-function Save-OrchestraSongIcon([string]$Root,$Song,[string]$ImagePath) {
+function New-OrchestraFramedArtwork([Drawing.Image]$Source) {
+    $result=[Drawing.Bitmap]::new(512,512,[Drawing.Imaging.PixelFormat]::Format32bppArgb);$g=[Drawing.Graphics]::FromImage($result)
+    try {
+        $g.SmoothingMode=[Drawing.Drawing2D.SmoothingMode]::AntiAlias;$g.InterpolationMode=[Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic;$g.PixelOffsetMode=[Drawing.Drawing2D.PixelOffsetMode]::HighQuality;$g.Clear([Drawing.Color]::Transparent)
+        $outline=[Drawing.PointF[]]@([Drawing.PointF]::new(82,66),[Drawing.PointF]::new(484,66),[Drawing.PointF]::new(424,424),[Drawing.PointF]::new(20,424))
+        $shadow=[Drawing.PointF[]]@([Drawing.PointF]::new(88,73),[Drawing.PointF]::new(490,73),[Drawing.PointF]::new(430,431),[Drawing.PointF]::new(26,431))
+        $brush=[Drawing.SolidBrush]::new([Drawing.Color]::FromArgb(180,5,21,46));try{$g.FillPolygon($brush,$shadow)}finally{$brush.Dispose()}
+        $brush=[Drawing.SolidBrush]::new([Drawing.Color]::FromArgb(255,14,36,65));try{$g.FillPolygon($brush,$outline)}finally{$brush.Dispose()}
+        $inside=[Drawing.PointF[]]@([Drawing.PointF]::new(89,72),[Drawing.PointF]::new(477,72),[Drawing.PointF]::new(419,417),[Drawing.PointF]::new(28,417))
+        $clip=[Drawing.Drawing2D.GraphicsPath]::new();$clip.AddPolygon($inside);$g.SetClip($clip)
+        $side=[Math]::Min($Source.Width,$Source.Height);$crop=[Drawing.RectangleF]::new(($Source.Width-$side)/2,($Source.Height-$side)/2,$side,$side)
+        $dest=[Drawing.PointF[]]@($inside[0],$inside[1],$inside[3]);$g.DrawImage($Source,$dest,$crop,[Drawing.GraphicsUnit]::Pixel)
+        $shine=[Drawing.Drawing2D.LinearGradientBrush]::new([Drawing.Point]::new(0,72),[Drawing.Point]::new(0,417),[Drawing.Color]::FromArgb(45,180,211,244),[Drawing.Color]::FromArgb(0,180,211,244));try{$g.FillPolygon($shine,$inside)}finally{$shine.Dispose()}
+        $g.ResetClip();$clip.Dispose();$pen=[Drawing.Pen]::new([Drawing.Color]::FromArgb(255,166,192,218),7);$pen.LineJoin=[Drawing.Drawing2D.LineJoin]::Miter
+        try{$g.DrawPolygon($pen,$outline)}finally{$pen.Dispose()};return $result
+    }catch{$result.Dispose();throw}finally{$g.Dispose()}
+}
+
+function Save-OrchestraSongIcon([string]$Root,$Song,[string]$ImagePath,[bool]$FrameArtwork=$false) {
     $folder=Join-Path $Root 'LibraryIcons';[void][IO.Directory]::CreateDirectory($folder)
     $filename=$Song.Id+'-'+[Guid]::NewGuid().ToString('N')+'.png'
     $destination=Join-Path $folder $filename
     if([IO.Path]::GetExtension($ImagePath) -eq '.ico'){
         $icon=[Drawing.Icon]::new($ImagePath);$bitmap=$icon.ToBitmap();$icon.Dispose()
     }else{$source=[Drawing.Image]::FromFile($ImagePath);try{$bitmap=[Drawing.Bitmap]::new($source)}finally{$source.Dispose()}}
-    try{$bitmap.Save($destination,[Drawing.Imaging.ImageFormat]::Png)}finally{$bitmap.Dispose()}
+    try{if($FrameArtwork){$framed=New-OrchestraFramedArtwork $bitmap;try{$framed.Save($destination,[Drawing.Imaging.ImageFormat]::Png)}finally{$framed.Dispose()}}else{$bitmap.Save($destination,[Drawing.Imaging.ImageFormat]::Png)}}finally{$bitmap.Dispose()}
     $map=@{};$mapPath=Join-Path $folder 'song-icons.json'
     if(Test-Path -LiteralPath $mapPath){(Get-Content -LiteralPath $mapPath -Raw|ConvertFrom-Json).PSObject.Properties|ForEach-Object {$map[$_.Name]=$_.Value}}
     $map[$Song.Id]=$filename
