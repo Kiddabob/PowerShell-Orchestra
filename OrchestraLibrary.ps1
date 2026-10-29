@@ -78,7 +78,7 @@ function Remove-OrchestraSong([string]$Root,$Song) {
 }
 
 function Get-OrchestraIconPrompt($Song) {
-    'Create one square 1024x1024 song-library icon for the PowerShell Orchestra app. Song: "'+$Song.Title+'". '+$Song.Theme+' Make the central symbol readable at small sizes, use a polished cohesive illustration style with strong contrast, and avoid small text or mockup UI. Return the icon image only.'
+    'Create one square 1024x1024 song-library icon for PowerShell Orchestra. Song: "'+$Song.Title+'". '+$Song.Theme+' Use the PowerShell Orchestra logo silhouette as a consistent frame: a slightly right-leaning, four-sided terminal panel with a dark navy outer edge, a thin light steel-blue border, a subtle dark-blue offset shadow, and the same soft glossy blue shine and highlight across its upper edge. Fill the inside of the framed panel with original, expressive album-art-style imagery inspired by the song, composed as a miniature cover with a clear focal point and rich detail. Keep the shine subtle enough that the artwork remains clear. Keep all artwork inside the border; do not replace or obscure the frame. Keep the design legible at small icon sizes, with a transparent background outside the silhouette. No album title, artist name, small text, interface mockup or extra framing. Return the icon image only.'
 }
 
 function Save-OrchestraSongIcon([string]$Root,$Song,[string]$ImagePath) {
