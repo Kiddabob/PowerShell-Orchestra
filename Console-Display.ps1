@@ -21,6 +21,14 @@ if($PreviewPath){
     $cell=@($config.Cells|Where-Object {$_.Id -eq $DisplayLayer})[0]
     $events=@(Read-Json (Join-Path $SessionDirectory ('events-'+$DisplayLayer+'.json')))
     $canvas.Song=$config.SongTitle;$canvas.Part=$cell.Title;$canvas.Band=$cell.Band;$canvas.Duration=$config.DurationMs
+    $screens=@(foreach($group in @($config.Cells|Group-Object Monitor)){
+        $minX=($group.Group|Measure-Object X -Minimum).Minimum;$minY=($group.Group|Measure-Object Y -Minimum).Minimum
+        $maxX=($group.Group|ForEach-Object {[int]$_.X+[int]$_.Width}|Measure-Object -Maximum).Maximum
+        [pscustomobject]@{Monitor=$group.Name;X=[int]$minX;Y=[int]$minY;Width=[int]($maxX-$minX)}
+    })
+    $cursor=0;$offset=0
+    foreach($screen in @($screens|Sort-Object X,Y)){if($screen.Monitor -eq $cell.Monitor){$offset=$cursor-$screen.X};$cursor+=$screen.Width}
+    $canvas.ScannerWidth=$cursor;$canvas.ScannerOffset=$offset;$canvas.WindowX=[int]$cell.X;$canvas.WindowWidth=[int]$cell.Width
     foreach($entry in $events|Where-Object {$_.Action -eq 'ON'}){$n=New-Object OrchestraConsole.Mark;$n.Start=$entry.TimeMs;$n.End=$entry.TimeMs+$entry.DurationMs;$n.Name=$entry.Note;$n.Hz=$entry.Hertz;$n.Pitch=[int][Math]::Round(69+12*[Math]::Log($entry.Hertz/440,2));$n.Part=$entry.Part;$marks.Add($n)}
 }
 $canvas.Notes=$marks.ToArray();$canvas.Build()

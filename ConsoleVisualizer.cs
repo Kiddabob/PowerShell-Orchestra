@@ -3,6 +3,7 @@ using System.Linq;
 using System.Text;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 namespace OrchestraConsole {
  public class Mark {public double Start,End,Hz;public int Pitch;public string Name,Part;}
  public class Entry {public double Time;public bool On;public string Text;}
@@ -15,6 +16,7 @@ namespace OrchestraConsole {
   [DllImport("kernel32.dll")]static extern IntPtr GetStdHandle(int id);
   [DllImport("kernel32.dll",CharSet=CharSet.Unicode,SetLastError=true)]static extern bool WriteConsoleOutputW(IntPtr handle,Cell[] buffer,Coord size,Coord origin,ref Rect region);
   public string Song="",Part="",Band="Mid";public double Duration=1,Position;public Mark[] Notes=new Mark[0];
+  public int ScannerWidth,ScannerOffset,WindowX,WindowWidth;
   public int ShownEvents {get;private set;} public int Frames {get;private set;}public int Width {get;private set;}public int Height {get;private set;}
   List<Entry> events=new List<Entry>();Queue<Entry> history=new Queue<Entry>();Cell[] cells;
   ushort Accent {get{return (ushort)(Band=="Low"?13:Band=="High"?14:11);}}
@@ -60,6 +62,20 @@ namespace OrchestraConsole {
    }else {var entry=history.LastOrDefault();if(entry!=null)Put(5,0,Stamp(entry.Time)+" "+entry.Text,Accent);}
    int length=Math.Max(4,Width-25),done=(int)(length*Math.Min(1,position/Math.Max(1,Duration)));
    Put(Height-1,0,"PS Orchestra> ["+new string('=',done)+new string(' ',length-done)+"]",Accent);
+   if(ScannerWidth>0 && WindowWidth>0 && Regex.IsMatch(Song??"",@"\bknight[\s_\-]*rider\b",RegexOptions.IgnoreCase|RegexOptions.CultureInvariant)){
+    double phase=(Math.Max(0,position)%6000)/3000.0,progress=phase<=1?phase:2-phase;
+    double bar=Math.Max(30,ScannerWidth*.085),center=bar/2+progress*(ScannerWidth-bar);
+    for(int x=0;x<Width;x++){
+     double global=WindowX+ScannerOffset+(x+.5)*WindowWidth/Width;
+     if(Math.Abs(global-center)>bar/2)continue;
+     for(int y=0;y<Height;y++){int index=y*Width+x;
+      // Preserve coloured note backgrounds and keep foreground text readable.
+      if((cells[index].Color&0xF0)!=0)continue;
+      ushort foreground=(ushort)(cells[index].Color&0x0F);if(foreground==0||foreground==4||foreground==8)foreground=15;
+      cells[index].Color=(ushort)(0x40|foreground);
+     }
+    }
+   }
    return cells;
   }
   public void Paint(double position){
