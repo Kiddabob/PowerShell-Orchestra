@@ -13,7 +13,7 @@ namespace OrchestraVisual {
   public Mark[] Notes=new Mark[0]; public string Song="PowerShell Orchestra",Part="",Band="Mid";
   public double Position,Duration=1; public int ShownEvents {get;private set;}
   public Color ArtworkColor=Color.Empty;
-  public int ScannerLeft,ScannerWidth;
+  public int ScannerLeft,ScannerWidth,ScannerOffset;
   List<Entry> events=new List<Entry>(); Queue<Entry> history=new Queue<Entry>();
   Color Accent {get {return Band=="Low"?Color.FromArgb(184,143,255):Band=="High"?Color.FromArgb(255,198,92):Color.FromArgb(65,224,218);}}
   bool KnightRider {get {return Regex.IsMatch(Song ?? "", @"\bknight[\s_\-]*rider\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);}}
@@ -47,7 +47,7 @@ namespace OrchestraVisual {
     int left=ScannerWidth>0?ScannerLeft:PointToScreen(Point.Empty).X;
     int extent=ScannerWidth>0?ScannerWidth:ClientSize.Width;
     double phase=(Math.Max(0,Position)%6000)/3000.0;double progress=phase<=1?phase:2-phase;
-    float barWidth=Math.Max(30,extent*.085f),centre=(float)(left+barWidth/2+progress*(extent-barWidth/2*2)-PointToScreen(Point.Empty).X);
+    float barWidth=Math.Max(30,extent*.085f),centre=(float)(left+barWidth/2+progress*(extent-barWidth/2*2)-(PointToScreen(Point.Empty).X+ScannerOffset));
     for(int i=6;i>=0;i--){float width=barWidth*(1+i*.42f);float x=centre-width/2;
      using(var b=new SolidBrush(Color.FromArgb(i==0?76:Math.Max(1,12-i),240,18,14)))g.FillRectangle(b,x,0,width,h);}
    }

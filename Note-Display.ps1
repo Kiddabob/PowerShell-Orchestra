@@ -33,9 +33,18 @@ if($PreviewPath){
     $events=@(Read-DisplayJson (Join-Path $SessionDirectory ('events-'+$DisplayLayer+'.json')))
     $form.Song=$config.SongTitle;$form.Part=$cell.Title;$form.Band=$cell.Band;$form.Duration=$config.DurationMs
     if($config.ArtworkColor -match '^#[0-9A-Fa-f]{6}$'){$form.ArtworkColor=[Drawing.ColorTranslator]::FromHtml($config.ArtworkColor)}
-    $left=($config.Cells|Measure-Object -Property X -Minimum).Minimum
-    $right=($config.Cells|ForEach-Object {[int]$_.X+[int]$_.Width}|Measure-Object -Maximum).Maximum
-    if($right -gt $left){$form.ScannerLeft=[int]$left;$form.ScannerWidth=[int]($right-$left)}
+    # Arrange occupied monitors side by side for the scanner, skipping unused
+    # desktop gaps while preserving a shared coordinate for all rows on a screen.
+    $screens=@(foreach($group in @($config.Cells|Group-Object Monitor)){
+        $minX=($group.Group|Measure-Object -Property X -Minimum).Minimum
+        $minY=($group.Group|Measure-Object -Property Y -Minimum).Minimum
+        $maxX=($group.Group|ForEach-Object {[int]$_.X+[int]$_.Width}|Measure-Object -Maximum).Maximum
+        [pscustomobject]@{Monitor=$group.Name;X=[int]$minX;Y=[int]$minY;Width=[int]($maxX-$minX)}
+    })
+    $screens=@($screens | Sort-Object X,Y)
+    $cursor=0;$offset=0
+    foreach($screen in $screens){if($screen.Monitor -eq $cell.Monitor){$offset=$cursor-$screen.X};$cursor+=$screen.Width}
+    if($cursor -gt 0){$form.ScannerLeft=0;$form.ScannerWidth=$cursor;$form.ScannerOffset=$offset}
     $form.SetBounds($cell.X,$cell.Y,$cell.Width,$cell.Height)
     foreach($entry in $events|Where-Object {$_.Action -eq 'ON'}){
         $n=New-Object OrchestraVisual.Mark;$n.Start=$entry.TimeMs;$n.End=$entry.TimeMs+$entry.DurationMs;$n.Name=$entry.Note;$n.Hz=$entry.Hertz;$n.Pitch=[int][Math]::Round(69+12*[Math]::Log($entry.Hertz/440,2));$n.Part=$entry.Part;$marks.Add($n)
