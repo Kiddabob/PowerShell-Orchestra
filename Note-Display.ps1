@@ -33,6 +33,9 @@ if($PreviewPath){
     $events=@(Read-DisplayJson (Join-Path $SessionDirectory ('events-'+$DisplayLayer+'.json')))
     $form.Song=$config.SongTitle;$form.Part=$cell.Title;$form.Band=$cell.Band;$form.Duration=$config.DurationMs
     if($config.ArtworkColor -match '^#[0-9A-Fa-f]{6}$'){$form.ArtworkColor=[Drawing.ColorTranslator]::FromHtml($config.ArtworkColor)}
+    $left=($config.Cells|Measure-Object -Property X -Minimum).Minimum
+    $right=($config.Cells|ForEach-Object {[int]$_.X+[int]$_.Width}|Measure-Object -Maximum).Maximum
+    if($right -gt $left){$form.ScannerLeft=[int]$left;$form.ScannerWidth=[int]($right-$left)}
     $form.SetBounds($cell.X,$cell.Y,$cell.Width,$cell.Height)
     foreach($entry in $events|Where-Object {$_.Action -eq 'ON'}){
         $n=New-Object OrchestraVisual.Mark;$n.Start=$entry.TimeMs;$n.End=$entry.TimeMs+$entry.DurationMs;$n.Name=$entry.Note;$n.Hz=$entry.Hertz;$n.Pitch=[int][Math]::Round(69+12*[Math]::Log($entry.Hertz/440,2));$n.Part=$entry.Part;$marks.Add($n)
