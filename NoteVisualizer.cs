@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
+using System.Text.RegularExpressions;
 
 namespace OrchestraVisual {
  public class Mark { public double Start,End,Hz; public int Pitch; public string Name,Part; }
@@ -11,8 +12,10 @@ namespace OrchestraVisual {
  public class LayerForm : Form {
   public Mark[] Notes=new Mark[0]; public string Song="PowerShell Orchestra",Part="",Band="Mid";
   public double Position,Duration=1; public int ShownEvents {get;private set;}
+  public Color ArtworkColor=Color.Empty;
   List<Entry> events=new List<Entry>(); Queue<Entry> history=new Queue<Entry>();
   Color Accent {get {return Band=="Low"?Color.FromArgb(184,143,255):Band=="High"?Color.FromArgb(255,198,92):Color.FromArgb(65,224,218);}}
+  bool KnightRider {get {return Regex.IsMatch(Song ?? "", @"\bknight[\s_\-]*rider\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);}}
   public LayerForm(){DoubleBuffered=true;ResizeRedraw=true;BackColor=Color.FromArgb(10,17,31);ForeColor=Color.White;AutoScaleMode=AutoScaleMode.None;StartPosition=FormStartPosition.Manual;MinimumSize=new Size(180,180);}
   public void Build(){
    Notes=Notes.OrderBy(n=>n.Start).ToArray();
@@ -23,7 +26,7 @@ namespace OrchestraVisual {
    double previous=Position;if(position<Position){ShownEvents=0;history.Clear();} Position=position;
    while(ShownEvents<events.Count && events[ShownEvents].Time<=Position){history.Enqueue(events[ShownEvents++]);while(history.Count>8)history.Dequeue();}
    Text="PowerShell Orchestra | "+Song+" | "+Part+" | "+Clock(Position);
-   if((int)(previous/1000)!=(int)(Position/1000)||Notes.Any(n=>n.End>Position-2600&&n.Start<Position+1100))Invalidate();
+   if(KnightRider||(int)(previous/1000)!=(int)(Position/1000)||Notes.Any(n=>n.End>Position-2600&&n.Start<Position+1100))Invalidate();
   }
   static string Clock(double ms){return TimeSpan.FromMilliseconds(Math.Max(0,ms)).ToString(@"mm\:ss");}
   void Label(Graphics g,string value,RectangleF area,float size,Color color,bool bold=false,bool right=false){
@@ -34,9 +37,16 @@ namespace OrchestraVisual {
    base.OnPaint(e);var g=e.Graphics;g.SmoothingMode=SmoothingMode.AntiAlias;g.TextRenderingHint=System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
    float w=ClientSize.Width,h=ClientSize.Height;if(w<40||h<40)return;
    float s=Math.Max(.65f,Math.Min(1.8f,Math.Min(w/760f,h/450f))),m=18*s;
-   using(var bg=new LinearGradientBrush(ClientRectangle,Color.FromArgb(22,32,53),Color.FromArgb(6,12,25),70))g.FillRectangle(bg,ClientRectangle);
+   Color top=ArtworkColor.IsEmpty?Color.FromArgb(22,32,53):Color.FromArgb(12+ArtworkColor.R/9,15+ArtworkColor.G/9,23+ArtworkColor.B/9);
+   Color bottom=ArtworkColor.IsEmpty?Color.FromArgb(6,12,25):Color.FromArgb(6+ArtworkColor.R/24,8+ArtworkColor.G/24,14+ArtworkColor.B/24);
+   using(var bg=new LinearGradientBrush(ClientRectangle,top,bottom,70))g.FillRectangle(bg,ClientRectangle);
    using(var glow=new SolidBrush(Color.FromArgb(10,Accent)))g.FillEllipse(glow,w*.48f,-h*.4f,w,h);
-   using(var brush=new SolidBrush(Accent))g.FillRectangle(brush,0,0,w,3*s);
+   if(KnightRider){
+    float height=Math.Max(4,5*s);using(var b=new SolidBrush(Color.FromArgb(70,60,0,0)))g.FillRectangle(b,0,0,w,height);
+    double phase=(Math.Max(0,Position)%2400)/1200.0;float progress=(float)(phase<=1?phase:2-phase);
+    float width=Math.Max(12,w*.055f),centre=width/2+progress*(w-width);
+    for(int i=5;i>=0;i--){float radius=width*(1+i*.5f);using(var b=new SolidBrush(Color.FromArgb(i==0?255:Math.Max(4,30-i*4),255,16,12)))g.FillRectangle(b,Math.Max(0,centre-radius/2),0,Math.Min(w,centre+radius/2)-Math.Max(0,centre-radius/2),height);}
+   }else using(var brush=new SolidBrush(Accent))g.FillRectangle(brush,0,0,w,3*s);
    float header=Math.Max(44*s,Math.Min(78*s,h*.18f));
    Label(g,Song,new RectangleF(m,8*s,w-m*2-90*s,24*s),13*s,Color.FromArgb(169,187,211));
    Label(g,Clock(Position),new RectangleF(w-m-86*s,8*s,86*s,24*s),18*s,Accent,true,true);
@@ -66,8 +76,8 @@ namespace OrchestraVisual {
     if(on)using(var pen=new Pen(Color.White,1))g.DrawRectangle(pen,rect.X,rect.Y,rect.Width,rect.Height);
    }
    float now=roll.Left+(float)(2600/span)*roll.Width;using(var pen=new Pen(Color.FromArgb(210,Color.White),1.5f))g.DrawLine(pen,now,roll.Top,now,roll.Bottom);g.Restore(state);
-   float top=roll.Bottom+10*s,line=15*s;int rows=Math.Max(1,(int)((h-top-12*s)/line));var recent=history.Reverse().Take(rows).Reverse().ToArray();
-   using(var font=new Font("Consolas",Math.Max(8,10*s),GraphicsUnit.Pixel))foreach(var entry in recent){using(var b=new SolidBrush(entry.On?Color.FromArgb(185,Accent):Color.FromArgb(91,115,146)))g.DrawString(TimeSpan.FromMilliseconds(entry.Time).ToString(@"mm\:ss\.fff")+"  "+entry.Text,font,b,m,top);top+=line;}
+   float historyTop=roll.Bottom+10*s,line=15*s;int rows=Math.Max(1,(int)((h-historyTop-12*s)/line));var recent=history.Reverse().Take(rows).Reverse().ToArray();
+   using(var font=new Font("Consolas",Math.Max(8,10*s),GraphicsUnit.Pixel))foreach(var entry in recent){using(var b=new SolidBrush(entry.On?Color.FromArgb(185,Accent):Color.FromArgb(91,115,146)))g.DrawString(TimeSpan.FromMilliseconds(entry.Time).ToString(@"mm\:ss\.fff")+"  "+entry.Text,font,b,m,historyTop);historyTop+=line;}
    using(var b=new SolidBrush(Color.FromArgb(45,Accent)))g.FillRectangle(b,0,h-3,w,3);
    using(var b=new SolidBrush(Accent))g.FillRectangle(b,0,h-3,(float)(w*Math.Min(1,Position/Math.Max(1,Duration))),3);
   }

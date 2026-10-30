@@ -173,9 +173,30 @@ $audio = $null
 $position = 0.0
 $status = 'Preparing'
 $statePath = Join-Path $sessionPath 'state.json'
+$artColor=''
+if($DisplayStyle -eq 'Panels'){
+    try{
+        . (Join-Path $PSScriptRoot 'OrchestraLibrary.ps1')
+        $midiPath=(Resolve-Path -LiteralPath $MidiFile).ProviderPath
+        $song=@(Get-OrchestraSongs $PSScriptRoot | Where-Object { [string]::Equals($_.Midi,$midiPath,[StringComparison]::OrdinalIgnoreCase) } | Select-Object -First 1)
+        if($song.Count -and (Test-Path -LiteralPath $song[0].Icon)){
+            Add-Type -AssemblyName System.Drawing
+            $original=[Drawing.Image]::FromFile($song[0].Icon)
+            try{$sample=[Drawing.Bitmap]::new($original,32,32)}finally{$original.Dispose()}
+            try{
+                $red=0.0;$green=0.0;$blue=0.0;$weight=0.0
+                for($x=7;$x -lt 25;$x++){for($y=7;$y -lt 25;$y++){
+                    $pixel=$sample.GetPixel($x,$y);$range=([Math]::Max($pixel.R,[Math]::Max($pixel.G,$pixel.B))-[Math]::Min($pixel.R,[Math]::Min($pixel.G,$pixel.B)))
+                    if($pixel.A -lt 128 -or $range -lt 20){continue};$w=$range/255.0;$red+=$pixel.R*$w;$green+=$pixel.G*$w;$blue+=$pixel.B*$w;$weight+=$w
+                }}
+                if($weight -gt 0){$artColor='#{0:X2}{1:X2}{2:X2}' -f [int]($red/$weight),[int]($green/$weight),[int]($blue/$weight)}
+            }finally{$sample.Dispose()}
+        }
+    }catch{Write-Verbose ('Artwork colour unavailable: '+$_.Exception.Message)}
+}
 try {
     Write-Json $statePath @{ Status='Preparing'; PositionMs=0 }
-    Write-Json (Join-Path $sessionPath 'session.json') @{ MasterPid=$PID; SongTitle=$SongTitle; Cells=$cells; DurationMs=$score.DurationMs; MasterIconApplied=[LayeredMusic.ConsoleTile]::HasCustomIcon }
+    Write-Json (Join-Path $sessionPath 'session.json') @{ MasterPid=$PID; SongTitle=$SongTitle; Cells=$cells; DurationMs=$score.DurationMs; MasterIconApplied=[LayeredMusic.ConsoleTile]::HasCustomIcon; ArtworkColor=$artColor }
     foreach ($cell in $cells) {
         $sortedEvents = @(New-NoteEvents @($score.Notes | Where-Object { $_.Layer -eq $cell.Id }))
         Write-Json (Join-Path $sessionPath ('events-{0}.json' -f $cell.Id)) $sortedEvents

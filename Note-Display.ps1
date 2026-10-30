@@ -1,6 +1,6 @@
 #requires -Version 5.1
 [CmdletBinding()]
-param([string]$SessionDirectory,[int]$DisplayLayer=-1,[switch]$PrepareOnly,[string]$PreviewPath,[int]$PreviewWidth=900,[int]$PreviewHeight=600,[string]$PreviewBand='Mid')
+param([string]$SessionDirectory,[int]$DisplayLayer=-1,[switch]$PrepareOnly,[string]$PreviewPath,[int]$PreviewWidth=900,[int]$PreviewHeight=600,[string]$PreviewBand='Mid',[string]$PreviewSong='Darude - Sandstorm',[double]$PreviewPosition=5040,[string]$PreviewArtworkColor='')
 $ErrorActionPreference='Stop'
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
@@ -23,7 +23,8 @@ $form=New-Object OrchestraVisual.LayerForm
 $form.Icon=[Drawing.Icon]::new((Join-Path $PSScriptRoot 'PowerShell-Orchestra-Note.ico'))
 $marks=New-Object 'Collections.Generic.List[OrchestraVisual.Mark]'
 if($PreviewPath){
-    $form.Song='Darude - Sandstorm';$form.Part=$PreviewBand+' / Synth lead / voice 1';$form.Band=$PreviewBand;$form.Duration=245000
+    $form.Song=$PreviewSong;$form.Part=$PreviewBand+' / Synth lead / voice 1';$form.Band=$PreviewBand;$form.Duration=245000
+    if($PreviewArtworkColor -match '^#[0-9A-Fa-f]{6}$'){$form.ArtworkColor=[Drawing.ColorTranslator]::FromHtml($PreviewArtworkColor)}
     $form.Size=New-Object Drawing.Size $PreviewWidth,$PreviewHeight
     for($i=0;$i -lt 45;$i++){$n=New-Object OrchestraVisual.Mark;$n.Start=$i*160;$n.End=$n.Start+120;$n.Pitch=64+@(0,0,0,3,0,0,5,3)[$i%8];$n.Name=@('E4','E4','E4','G4','E4','E4','A4','G4')[$i%8];$n.Hz=440*[Math]::Pow(2,($n.Pitch-69)/12);$marks.Add($n)}
 }else{
@@ -31,6 +32,7 @@ if($PreviewPath){
     $cell=@($config.Cells|Where-Object {$_.Id -eq $DisplayLayer})[0]
     $events=@(Read-DisplayJson (Join-Path $SessionDirectory ('events-'+$DisplayLayer+'.json')))
     $form.Song=$config.SongTitle;$form.Part=$cell.Title;$form.Band=$cell.Band;$form.Duration=$config.DurationMs
+    if($config.ArtworkColor -match '^#[0-9A-Fa-f]{6}$'){$form.ArtworkColor=[Drawing.ColorTranslator]::FromHtml($config.ArtworkColor)}
     $form.SetBounds($cell.X,$cell.Y,$cell.Width,$cell.Height)
     foreach($entry in $events|Where-Object {$_.Action -eq 'ON'}){
         $n=New-Object OrchestraVisual.Mark;$n.Start=$entry.TimeMs;$n.End=$entry.TimeMs+$entry.DurationMs;$n.Name=$entry.Note;$n.Hz=$entry.Hertz;$n.Pitch=[int][Math]::Round(69+12*[Math]::Log($entry.Hertz/440,2));$n.Part=$entry.Part;$marks.Add($n)
@@ -38,7 +40,7 @@ if($PreviewPath){
 }
 $form.Notes=$marks.ToArray();$form.Build();$form.Advance(0)
 if($PreviewPath){
-    $form.Show();$form.Advance(5040);[Windows.Forms.Application]::DoEvents()
+    $form.Show();$form.Advance($PreviewPosition);[Windows.Forms.Application]::DoEvents()
     $bitmap=[Drawing.Bitmap]::new($form.Width,$form.Height)
     try{$form.DrawToBitmap($bitmap,[Drawing.Rectangle]::new(0,0,$form.Width,$form.Height));$bitmap.Save($PreviewPath,[Drawing.Imaging.ImageFormat]::Png)}finally{$bitmap.Dispose()}
     $form.Close();$form.Dispose();return
