@@ -2,6 +2,7 @@
 [CmdletBinding()]
 param([string]$SessionDirectory,[int]$DisplayLayer=-1,[switch]$PrepareOnly,[string]$PreviewPath,[int]$PreviewWidth=900,[int]$PreviewHeight=600,[string]$PreviewBand='Mid',[string]$PreviewSong='Darude - Sandstorm',[double]$PreviewPosition=5040,[string]$PreviewArtworkColor='')
 $ErrorActionPreference='Stop'
+. (Join-Path $PSScriptRoot 'DisplayClock.ps1')
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 if(-not ('OrchestraVisual.LayerForm' -as [type])){
@@ -62,14 +63,14 @@ function Write-DisplayReceipt {
     [IO.File]::WriteAllText((Join-Path $SessionDirectory ('ready-'+$DisplayLayer+'.json')),($receipt|ConvertTo-Json -Compress))
 }
 $startupFocusAttempted=$false;$startupFocusReleased=$false
-$timer=New-Object Windows.Forms.Timer;$timer.Interval=50
+$timer=New-Object Windows.Forms.Timer;$timer.Interval=if($form.Song -match '(?i)\bknight[\s_\-]*rider\b'){33}else{50}
 $health=[Diagnostics.Stopwatch]::StartNew()
 $timer.Add_Tick({
     try{
         try{$state=Read-DisplayJson (Join-Path $SessionDirectory 'state.json')}catch{return}
         if($state.Status -ne 'Preparing'){
             if(-not $startupFocusAttempted){$script:startupFocusReleased=[LayeredMusic.ConsoleTile]::ReleaseFocus($form.Handle);$script:startupFocusAttempted=$true}
-            $form.Advance([double]$state.PositionMs)
+            $form.Advance((Get-OrchestraDisplayPosition $state))
         }
         if($health.ElapsedMilliseconds -gt 500){Write-DisplayReceipt;$health.Restart();if(-not(Get-Process -Id $config.MasterPid -ErrorAction SilentlyContinue)){$form.Close()}}
         if($state.Status -in @('Complete','Stopped','Error')){$form.Close()}

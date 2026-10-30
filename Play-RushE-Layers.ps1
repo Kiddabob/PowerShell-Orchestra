@@ -247,7 +247,8 @@ try {
             throw ('Note window failed: ' + $displayError.Message)
         }
         $position = $audio.Milliseconds
-        Write-Json $statePath @{ Status='Playing'; PositionMs=$position }
+        $clockTicks=[Diagnostics.Stopwatch]::GetTimestamp()
+        Write-Json $statePath @{ Status='Playing'; PositionMs=$position; ClockTicks=$clockTicks }
         if ($StopAfterSeconds -gt 0 -and $position -ge $StopAfterSeconds*1000) { $status='Stopped'; break }
         Write-Progress -Activity ($SongTitle + ' - all layers') -Status ([TimeSpan]::FromMilliseconds($position).ToString('mm\:ss')) -PercentComplete ([Math]::Min(100, 100*$position/$score.DurationMs))
         Start-Sleep -Milliseconds 30

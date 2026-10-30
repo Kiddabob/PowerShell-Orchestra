@@ -2,6 +2,7 @@
 [CmdletBinding()]
 param([string]$SessionDirectory,[int]$DisplayLayer=-1,[switch]$PrepareOnly,[string]$PreviewPath,[int]$Columns=92,[int]$Rows=30)
 $ErrorActionPreference='Stop'
+. (Join-Path $PSScriptRoot 'DisplayClock.ps1')
 if(-not('OrchestraConsole.Canvas' -as [type])){
     $source=Join-Path $PSScriptRoot 'ConsoleVisualizer.cs';$hash=[Security.Cryptography.SHA256]::Create()
     try{$key=[BitConverter]::ToString($hash.ComputeHash([IO.File]::ReadAllBytes($source))).Replace('-','').Substring(0,16)}finally{$hash.Dispose()}
@@ -52,13 +53,14 @@ $startupFocusReleased=$false
 $startupFocusAttempted=$false
 Write-ConsoleReceipt
 $health=[Diagnostics.Stopwatch]::StartNew()
+$refreshMs=if($canvas.Song -match '(?i)\bknight[\s_\-]*rider\b'){35}else{80}
 try{while($true){
     try{$state=Read-Json (Join-Path $SessionDirectory 'state.json')}catch{Start-Sleep -Milliseconds 60;continue}
     if($state.Status -ne 'Preparing'){
         if(-not $startupFocusAttempted){$startupFocusReleased=[LayeredMusic.ConsoleTile]::ReleaseFocus();$startupFocusAttempted=$true}
-        $canvas.Paint([double]$state.PositionMs)
+        $canvas.Paint((Get-OrchestraDisplayPosition $state))
     }
     if($health.ElapsedMilliseconds -ge 500){$Host.UI.RawUI.WindowTitle='PowerShell Orchestra | '+$canvas.Song+' | '+$canvas.Part+' | '+[TimeSpan]::FromMilliseconds($canvas.Position).ToString('mm\:ss');Write-ConsoleReceipt;$health.Restart();if(-not(Get-Process -Id $config.MasterPid -ErrorAction SilentlyContinue)){break}}
     if($state.Status -in @('Complete','Stopped','Error')){break}
-    Start-Sleep -Milliseconds 80
+    Start-Sleep -Milliseconds $refreshMs
 }}finally{[Console]::CursorVisible=$true}
